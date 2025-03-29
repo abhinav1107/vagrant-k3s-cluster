@@ -23,6 +23,7 @@ cluster-local.yaml
 # Different IDEs
 .vscode
 .idea
+.ansible
 
 ### macOS template
 # General
