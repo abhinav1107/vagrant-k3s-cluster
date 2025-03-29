@@ -1,0 +1,29 @@
+frontend fe-http
+    bind *:80
+    mode tcp
+    option tcplog
+    default_backend be-traefik-http
+
+backend be-traefik-http
+    balance roundrobin
+    option tcp-check
+    default-server inter 3s fall 3 rise 2
+
+{% for i in groups['kubernetes'] %}
+    server {{hostvars[i]["ht_name"]}} {{i}}:31465 check
+{% endfor %}
+
+frontend fe-https
+    bind *:443
+    mode tcp
+    option tcplog
+    default_backend be-traefik-https
+
+backend be-traefik-https
+    balance roundrobin
+    option tcp-check
+    default-server inter 3s fall 3 rise 2
+
+{% for i in groups['kubernetes'] %}
+    server {{hostvars[i]["ht_name"]}} {{i}}:30647 check
+{% endfor %}

@@ -1,0 +1,38 @@
+---
+- name: ensure kubernetes repo
+  copy:
+    src: kubernetes.repo
+    dest: /etc/yum.repos.d/kubernetes.repo
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: install kubelet, kubeadm and kubectl
+  ansible.builtin.dnf:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    disable_excludes: kubernetes
+  environment: "{{ http_proxy | default({}) }}"
+
+- name: ensure kubelet sysconf
+  ansible.builtin.template:
+    src: sysconfig.kubelet.j2
+    dest: /etc/sysconfig/kubelet
+    owner: root
+    group: root
+    mode: '0644'
+  register: pl_kubelet_sysconf_copy
+
+- name: if last step has changed then restart kubelet
+  ansible.builtin.service:
+    name: kubelet
+    state: restarted
+  when: pl_kubelet_sysconf_copy is changed
+
+- name: ensure kubelet service is started and enabled
+  ansible.builtin.service:
+    name: kubelet
+    state: started
+    enabled: true

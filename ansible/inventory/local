@@ -1,0 +1,6 @@
+# fmt: ini
+[local]
+127.0.0.1 ht_name=local
+
+[local:vars]
+ansible_connection=local

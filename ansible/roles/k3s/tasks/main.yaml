@@ -1,0 +1,78 @@
+---
+- name: fail if pl_k3s_token is NONE
+  ansible.builtin.fail:
+    msg: "token value can not be empty. Either pass is via k3s_token or set an inventory variable ht_k3s_token"
+  when: pl_k3s_token == 'NONE'
+
+- name: fail if pl_k3s_datastore_endpoint is NONE
+  ansible.builtin.fail:
+    msg: "token value can not be empty. Either pass is via k3s_datastore_endpoint or set an inventory variable ht_k3s_datastore_endpoint"
+  when: pl_k3s_datastore_endpoint == 'NONE'
+
+- name: ensure containerd service is running
+  ansible.builtin.service:
+    name: containerd
+    state: started
+    enabled: true
+
+- name: ensure k3s binary locally
+  ansible.builtin.get_url:
+    url: "https://github.com/k3s-io/k3s/releases/download/{{pl_k3s_version}}/k3s"
+    dest: /usr/local/sbin/k3s
+    owner: root
+    group: root
+    mode: '0750'
+  environment: "{{ http_proxy | default({}) }}"
+  register: pl_k3s_binary_download
+
+- name: ensure config file directory is present
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: ensure systemd service file for k3s service
+  ansible.builtin.template:
+    src: k3s-systemd.service.j2
+    dest: /usr/lib/systemd/system/k3s.service
+    owner: root
+    group: root
+    mode: '0644'
+  register: pl_k3s_systemd_service_copy
+
+- name: if last step has changed then perform daemon reload
+  ansible.builtin.command: systemctl daemon-reload
+  when: pl_k3s_systemd_service_copy is changed
+
+- name: ensure sysconfig file
+  ansible.builtin.template:
+    src: k3s-sysconfig.j2
+    dest: /etc/sysconfig/k3s
+    owner: root
+    group: root
+    mode: '0640'
+  register: pl_k3s_sysconfig_copy
+
+- name: ensure k3s config file
+  ansible.builtin.template:
+    src: k3s-config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    owner: root
+    group: root
+    mode: '0640'
+  register: pl_k3s_config_copy
+
+
+- name: restart k3s service if any of the files update task has changed
+  ansible.builtin.service:
+    name: k3s
+    state: restarted
+  when: pl_k3s_systemd_service_copy is changed or pl_k3s_sysconfig_copy is changed or pl_k3s_config_copy is changed
+
+- name: ensure k3 service is running
+  ansible.builtin.service:
+    name: k3s
+    state: started
+    enabled: true

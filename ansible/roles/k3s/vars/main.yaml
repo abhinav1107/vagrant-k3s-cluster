@@ -1,0 +1,6 @@
+---
+pl_cluster_init: "{{cluster_init| default('false')| bool}}"
+pl_pod_network_cidr: "{{ pod_cidr | default(ht_cluster_pod_cidr | default('10.244.0.0/20')) }}"
+pl_service_network_cidr: "{{ service_cidr | default(ht_cluster_service_cidr| default('10.244.240.0/20')) }}"
+pl_k3s_token: "{{ k3s_token | default(ht_k3s_token| default('NONE'))}}"
+pl_k3s_datastore_endpoint: "{{ k3s_datastore_endpoint| default(ht_k3s_datastore_endpoint | default('NONE')) }}"

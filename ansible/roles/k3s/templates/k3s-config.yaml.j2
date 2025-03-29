@@ -1,0 +1,33 @@
+# common options
+token: "{{pl_k3s_token}}"
+node-name: "{{ht_name}}"
+node-ip: "{{inventory_hostname}}"
+{% if ht_external_ip is defined %}
+node-external-ip: {{ht_external_ip}}
+{% endif %}
+node-label:
+  - "topology.kubernetes.io/region=vagrant"
+  - "topology.kubernetes.io/zone={{ht_zone| default('one')}}"
+{% if "control-plane" in group_names %}
+node-taint+:
+  - "CriticalAddonsOnly=true:NoSchedule"
+datastore-endpoint: "{{pl_k3s_datastore_endpoint}}"
+cluster-cidr: "{{pl_pod_network_cidr}}"
+service-cidr: "{{pl_service_network_cidr}}"
+{% if ht_environment_domain is defined and ht_k8s_apiserver_base is defined %}
+tls-san:
+  - "{{ht_k8s_apiserver_base}}.{{ht_environment_domain}}"
+{% endif %}
+disable:
+  - servicelb
+  - traefik
+  - metrics-server
+flannel-backend: none
+disable-network-policy: true
+{% else %}
+{% if ht_environment_domain is defined and ht_k8s_apiserver_base is defined %}
+server: "https://{{ht_k8s_apiserver_base}}.{{ht_environment_domain}}:6443"
+{% else %}
+server: "https://{{groups['control-plane'][0]}}:6443"
+{% endif %}
+{% endif %}

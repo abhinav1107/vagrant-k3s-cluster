@@ -1,0 +1,147 @@
+---
+- name: ensure hosts entry for this machine
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^(.*)\s+{{ht_name}}(.*)$'
+    line: '{{inventory_hostname}}    {% if ht_environment_domain is defined %}{{ht_name}}.{{ht_environment_domain}}    {% endif %}{{ht_name}}'
+    insertbefore: BOF
+  register: pl_hostname_file_update
+
+- name: set hostname if last task changed
+  ansible.builtin.hostname:
+    name: "{{ ht_name+'.'+ht_environment_domain if ht_environment_domain is defined else ht_name }}"
+  when: pl_hostname_file_update is changed
+
+- name: Ensure beginning placeholder
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: '### host automation update placeholder - start'
+    insertafter: EOF
+
+- name: Ensure end placeholder
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: '### host automation update placeholder - end'
+    insertafter: '### host automation update placeholder - start'
+
+- name: Ensure each vm from vagrant is present in all vms hosts file
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^{{item}}(.*)$'
+    line: '{{item}}    {% if ht_environment_domain is defined %}{{hostvars[item]["ht_name"]}}.{{ht_environment_domain}}    {% endif %}{{hostvars[item]["ht_name"]}}'
+    insertbefore: '### host automation update placeholder - end'
+  when: item != inventory_hostname
+  loop: "{{groups['vagrant']}}"
+
+- name: Ensure resolv.conf file
+  ansible.builtin.template:
+    src: resolv.conf.j2
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: '0644'
+  when: ht_local_nameservers is defined
+
+- name: block for self sign certificates
+  block:
+    - name: check if we have cert files
+      ansible.builtin.stat:
+        path: "{{playbook_dir}}/files/certs/{{ht_environment_domain}}/ca.crt"
+      register: pl_env_domain_ca_cert_file
+      delegate_to: 127.0.0.1
+    
+    - name: block if we have self sign ca cert file
+      when: pl_env_domain_ca_cert_file.stat.exists
+      block:
+        - name: copy self signed ca file
+          ansible.builtin.copy:
+            src: "certs/{{ht_environment_domain}}/ca.crt"
+            dest: "/etc/pki/ca-trust/source/anchors/{{ht_environment_domain | regex_replace('\\.', '-') }}-ca.crt"
+            owner: root
+            group: root
+            mode: '0644'
+          register: pl_env_domain_ca_cert_file_copy
+        
+        - name: if last task has changed, update local ca trust
+          ansible.builtin.command: update-ca-trust extract
+          when: pl_env_domain_ca_cert_file_copy is changed
+  when: ht_environment_domain is defined
+
+- name: block when ht_proxy_host is defined
+  block:
+    - name: Ensure /etc/ansible/facts.d directory
+      ansible.builtin.file:
+        path: /etc/ansible/facts.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Ensure script that can generate ansible fact for hosts for proxy data
+      ansible.builtin.template:
+        src: proxy.fact.j2
+        dest: /etc/ansible/facts.d/http_proxy.fact
+        owner: root
+        group: root
+        mode: '0755'
+  when: ht_proxy_host is defined and ht_proxy_port is defined        
+
+- name: block for kubernetes host initial configuration
+  block:
+    - name: load br_netfilter and overlay kernel modules
+      ansible.builtin.modprobe:
+        name: "{{item}}"
+        state: present
+        persistent: present
+      loop:
+        - br_netfilter
+        - overlay
+
+    - name: ensure sysctl entries
+      ansible.builtin.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        reload: "{{ item.reload }}"
+        state: present
+        sysctl_set: true
+      loop:
+        - { name: net.bridge.bridge-nf-call-iptables, value: 1, reload: false }
+        - { name: net.bridge.bridge-nf-call-ip6tables, value: 1, reload: false }
+        - { name: net.ipv4.ip_forward, value: 1, reload: true }
+
+    - name: add docker-ce repo
+      ansible.builtin.get_url:
+        url: "https://download.docker.com/linux/rhel/docker-ce.repo"
+        dest: /etc/yum.repos.d/docker-ce.repo
+        owner: root
+        group: root
+        mode: '0644'
+      environment: "{{ http_proxy | default({}) }}"
+
+    - name: install containerd runtime
+      ansible.builtin.dnf:
+        name: "containerd.io"
+      environment: "{{ http_proxy | default({}) }}"
+
+    - name: generate containerd default config
+      shell: containerd config default | sed 's/SystemdCgroup = false/SystemdCgroup = true/' | tee /etc/containerd/config.toml
+      register: pl_containerd_config_generat
+      args:
+        creates: /etc/containerd/.containerd_config_generat
+
+    - name: touch file if last step has changed
+      ansible.builtin.file:
+        path: /etc/containerd/.containerd_config_generat
+        state: touch
+        owner: root
+        group: root
+        mode: '0444'
+      when: pl_containerd_config_generat is changed
+
+    - name: restart containerd if config file changed
+      ansible.builtin.service:
+        name: containerd
+        state: restarted
+        enabled: true
+      when: pl_containerd_config_generat is changed
+  when: '"kubernetes" in group_names'

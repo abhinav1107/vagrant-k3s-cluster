@@ -1,0 +1,6 @@
+{% for i in ht_local_nameservers %}
+nameserver {{i}}
+{% endfor %}
+{% if ht_environment_domain is defined %}
+search {{ht_environment_domain}}
+{% endif %}

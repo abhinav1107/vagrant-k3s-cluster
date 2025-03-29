@@ -1,0 +1,104 @@
+---
+- name: ensure haproxy package
+  ansible.builtin.dnf:
+    name: haproxy
+  environment: "{{ http_proxy | default({}) }}"
+
+# - name: nginx install and configure block when ht_environment_domain is defined
+#   block:
+#     - name: check if ca.crt file is present localy
+#       ansible.builtin.stat:
+#         path: "{{playbook_dir}}/files/certs/{{ht_environment_domain}}/ca.crt"
+#       register: pl_local_domain_cert_file_check
+#       delegate_to: 127.0.0.1
+
+#     - name: block for ngninx install and configure if ca cert file was found
+#       block:
+#         - name: ensure nginx
+#           ansible.builtin.dnf:
+#             name: nginx
+#           environment: "{{ http_proxy | default({}) }}"
+
+#         - name: ensure self signed certificate folder
+#           ansible.builtin.file:
+#             path: "/etc/nginx/ssl/{{ht_environment_domain}}"
+#             state: directory
+#             owner: root
+#             group: root
+#             mode: '0755'
+
+#         - name: copy cert files
+#           ansible.builtin.copy:
+#             src: "certs/{{ht_environment_domain}}/{{item.src}}"
+#             dest: "/etc/nginx/ssl/{{ht_environment_domain}}/{{item.dest}}"
+#             owner: nginx
+#             group: nginx
+#             mode: "{{item.mode}}"
+#           loop:
+#             - {"src": "server-fullchain.crt", "dest": "server.crt", "mode": "0644"}
+#             - {"src": "server.key", "dest": "server.key", "mode": "0600"}
+#           register: pl_env_domain_cert_file_copy
+
+#         - name: copy nginx configuration
+#           ansible.builtin.template:
+#             src: dummy-api-nginx.conf.j2
+#             dest: /etc/nginx/nginx.conf
+#             owner: root
+#             group: root
+#             mode: '0644'
+#           register: pl_nginx_conf_copy
+
+#         - name: restart nginx if any of the copy operation has changed
+#           ansible.builtin.service:
+#             name: nginx
+#             state: restarted
+#             enabled: true
+#           when: pl_env_domain_cert_file_copy is changed or pl_nginx_conf_copy is changed
+
+#         - name: ensure nginx service is running
+#           ansible.builtin.service:
+#             name: nginx
+#             state: started
+#             enabled: true
+#       when: pl_local_domain_cert_file_check.stat.exists
+#   when: ht_environment_domain is defined
+
+- name: copy global config file
+  ansible.builtin.template:
+    src: haproxy.cfg
+    dest: /etc/haproxy/haproxy.cfg
+    owner: root
+    group: root
+    mode: '0644'
+  register: pl_main_haproxy_config
+
+- name: copy k8s api server haproxy config
+  ansible.builtin.template:
+    src: k8s-apiserver.cfg.j2
+    dest: /etc/haproxy/conf.d/k8s-apiserver.cfg
+    owner: root
+    group: root
+    mode: '0644'
+  register: pl_api_haproxy_config
+
+- name: copy k8s http/https service load balancing config file
+  ansible.builtin.template:
+    src: k8s-http.cfg.j2
+    dest: /etc/haproxy/conf.d/k8s-http.cfg
+    owner: root
+    group: root
+    mode: '0644'
+  register: pl_http_haproxy_config
+
+- name: if any of the file has changed restart haproxy
+  ansible.builtin.service:
+    name: haproxy
+    state: restarted
+    enabled: true
+  when: pl_main_haproxy_config is changed or pl_api_haproxy_config is changed or pl_http_haproxy_config is changed
+
+- name: ensure haproxy is running
+  ansible.builtin.service:
+    name: haproxy
+    state: started
+    enabled: true

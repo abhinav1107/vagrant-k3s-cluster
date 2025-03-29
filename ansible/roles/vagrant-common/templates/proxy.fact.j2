@@ -1,0 +1,24 @@
+#!/bin/bash
+
+PROXY_HOST="{{ht_proxy_host| default('127.0.0.1')}}"
+PROXY_PORT="{{ht_proxy_port| default('3128')}}"
+
+# check if proxy port is accepting connection on proxy port
+nc -z "${PROXY_HOST}" "${PROXY_PORT}"
+port_check_result="$?"
+
+if [ $port_check_result -eq 0 ]; then
+cat << ENDOFDATA
+{
+    "http_proxy": "http://${PROXY_HOST}:${PROXY_PORT}",
+    "https_proxy": "http://${PROXY_HOST}:${PROXY_PORT}",
+    "no_proxy": "169.254.169.254,localhost,127.0.0.1"
+}
+ENDOFDATA
+else
+cat << ENDOFDATA
+{
+    "no_proxy": "169.254.169.254,localhost,127.0.0.1"
+}
+ENDOFDATA
+fi

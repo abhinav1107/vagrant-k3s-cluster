@@ -1,0 +1,6 @@
+---
+- name: configure haproxy for load balancing
+  hosts: "{{inv_hosts| default('haproxy')}}"
+
+  roles:
+    - role: haproxy

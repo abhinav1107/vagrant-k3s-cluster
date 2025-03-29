@@ -1,0 +1,7 @@
+---
+- name: configure vagrant hosts for generic tasks
+  hosts: "{{inv_hosts| default('vagrant')}}"
+  gather_facts: true
+
+  roles:
+    - role: vagrant-common

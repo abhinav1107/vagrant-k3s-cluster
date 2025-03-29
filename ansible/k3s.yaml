@@ -1,0 +1,14 @@
+---
+- name: configure first server node
+  hosts: control-plane[0]
+
+  roles:
+    - role: k3s
+      vars:
+        cluster_init: true
+
+- name: configure rest of the nodes
+  hosts: control-plane:worker:!control-plane[0]
+  
+  roles:
+    - role: k3s

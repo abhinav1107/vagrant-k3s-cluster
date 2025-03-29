@@ -1,0 +1,21 @@
+[Unit]
+Description=Lightweight Kubernetes using k3s
+Documentation=https://k3s.io
+Wants=network-online.target
+After=network-online.target containerd.service
+
+[Service]
+EnvironmentFile=-/etc/systemd/system/k3s.service.env
+EnvironmentFile=-/etc/sysconfig/k3s
+KillMode=process
+Delegate=yes
+User=root
+LimitNOFILE=1048576
+LimitNPROC=infinity
+LimitCORE=infinity
+TasksMax=infinity
+TimeoutStartSec=0
+ExecStart=/usr/local/sbin/k3s {{ 'server' if "control-plane" in group_names else 'agent' }} --config /etc/rancher/k3s/config.yaml
+
+[Install]
+WantedBy=multi-user.target

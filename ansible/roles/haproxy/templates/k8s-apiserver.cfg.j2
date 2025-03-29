@@ -1,0 +1,25 @@
+listen stats
+    bind 0.0.0.0:16443
+    mode http
+    log global
+    stats enable
+    stats realm Haproxy\ Statistics
+    stats uri /
+
+frontend k8s-frontend
+    bind 0.0.0.0:6443
+    mode tcp
+    option tcplog
+    default_backend k8s-backend
+
+{# most of this is taken from https://stackoverflow.com/a/39052040/1318643 #}
+backend k8s-backend
+    mode tcp
+    balance roundrobin
+    option tcp-check
+    default-server inter 10s downinter 5s
+
+    # real control plane servers
+{% for i in groups['control-plane'] %}
+    server {{hostvars[i]["ht_name"]}} {{i}}:6443 check
+{% endfor %}
