@@ -71,7 +71,7 @@
     state: restarted
   when: pl_k3s_systemd_service_copy is changed or pl_k3s_sysconfig_copy is changed or pl_k3s_config_copy is changed
 
-- name: ensure k3 service is running
+- name: ensure k3s service is running
   ansible.builtin.service:
     name: k3s
     state: started
