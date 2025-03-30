@@ -9,6 +9,6 @@
 
 - name: configure rest of the nodes
   hosts: control-plane:worker:!control-plane[0]
-  
+
   roles:
     - role: k3s

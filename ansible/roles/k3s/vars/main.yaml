@@ -4,3 +4,10 @@ pl_pod_network_cidr: "{{ pod_cidr | default(ht_cluster_pod_cidr | default('10.24
 pl_service_network_cidr: "{{ service_cidr | default(ht_cluster_service_cidr| default('10.244.240.0/20')) }}"
 pl_k3s_token: "{{ k3s_token | default(ht_k3s_token| default('NONE'))}}"
 pl_k3s_datastore_endpoint: "{{ k3s_datastore_endpoint| default(ht_k3s_datastore_endpoint | default('NONE')) }}"
+pl_cilium_cli_arch_type:
+  'x86_64': 'amd64'
+  'aarch64': 'arm64'
+pl_cilium_version: '1.17.2'
+pl_cilium_cli_version: 'v0.18.2'
+pl_k3s_version: "{{k3s_version| default('v1.32.3+k3s1')}}"
+pl_k3s_api_endpoint: "{{ (ht_k8s_apiserver_base + '.' + ht_environment_domain) if ht_k8s_apiserver_base is defined and ht_environment_domain is defined else groups['control-plane'][0] }}"

@@ -71,8 +71,78 @@
     state: restarted
   when: pl_k3s_systemd_service_copy is changed or pl_k3s_sysconfig_copy is changed or pl_k3s_config_copy is changed
 
-- name: ensure k3 service is running
+- name: ensure k3s service is running
   ansible.builtin.service:
     name: k3s
     state: started
     enabled: true
+
+- name: block for cluster init
+  block:
+    - name: ensure cilium binary is present
+      ansible.builtin.get_url:
+        url: 'https://github.com/cilium/cilium-cli/releases/download/{{pl_cilium_cli_version}}/cilium-{{ansible_system| lower}}-{{pl_cilium_cli_arch_type[ansible_architecture]}}.tar.gz'
+        dest: /tmp/cilium-{{pl_cilium_cli_version}}.tar.gz
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: extract cilium cli binary
+      ansible.builtin.unarchive:
+        src: /tmp/cilium-{{pl_cilium_cli_version}}.tar.gz
+        dest: /usr/sbin
+        owner: root
+        group: root
+        mode: '0750'
+        remote_src: true
+
+    - name: install cilium CNI
+      ansible.builtin.command: cilium install --version {{pl_cilium_version}}
+      environment:
+        KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
+      args:
+        creates: /etc/rancher/.cilium-cli-install.done
+      register: pl_cilium_cni_install
+
+    - name: copy kubeconfig file for next fetch, use command instead of copy
+      ansible.builtin.command: cp -af k3s.yaml .k3s.fetch
+      args:
+        chdir: /etc/rancher/k3s
+        creates: /etc/rancher/k3s/.k3s.fetch
+
+    - name: replace server address in this file
+      ansible.builtin.replace:
+        path: /etc/rancher/k3s/.k3s.fetch
+        regexp: '^(\s+)server:\s+https://127.0.0.1:6443(.*)$'
+        replace: '\1server: https://{{pl_k3s_api_endpoint}}:6443'
+
+    - name: touch done file after cilium setup is done
+      ansible.builtin.file:
+        path: /etc/rancher/.cilium-cli-install.done
+        state: touch
+        owner: root
+        group: root
+        mode: '0644'
+      when: pl_cilium_cni_install is changed
+
+    - name: fetch new kubeconfig file
+      ansible.builtin.fetch:
+        src: /etc/rancher/k3s/.k3s.fetch
+        dest: "{{playbook_dir}}/../sharedfiles/manifests/.kubeconfig.yaml"
+        flat: true
+
+    - name: create envrc file for later use
+      ansible.builtin.copy:
+        dest: "{{playbook_dir}}/../sharedfiles/manifests/.envrc"
+        content: 'export KUBECONFIG="${PWD}/.kubeconfig.yaml"'
+        mode: '0600'
+      delegate_to: 127.0.0.1
+      register: pl_kubeconfig_envrc_copy
+
+    - name: run direnv allow locally if last step has changed
+      ansible.builtin.command: direnv allow
+      args:
+        chdir: "{{playbook_dir}}/../sharedfiles/manifests"
+      when: pl_kubeconfig_envrc_copy is changed
+      delegate_to: 127.0.0.1
+  when: pl_cluster_init
