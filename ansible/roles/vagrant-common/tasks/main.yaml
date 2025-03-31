@@ -57,7 +57,7 @@
   block:
     - name: format extra disk
       community.general.filesystem:
-        fstype: xfs
+        fstype: ext4
         dev: /dev/{{pl_extra_disk_check.stdout_lines[0]}}
 
     - name: find UUID of extra disk
@@ -75,7 +75,7 @@
       ansible.posix.mount:
         path: /var/openebs
         src: "UUID={{ pl_extra_disk_uuid.stdout }}"
-        fstype: xfs
+        fstype: ext4
         opts: defaults
         passno: "2"
         state: mounted
