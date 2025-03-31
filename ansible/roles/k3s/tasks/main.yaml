@@ -9,12 +9,18 @@
     msg: "token value can not be empty. Either pass is via k3s_datastore_endpoint or set an inventory variable ht_k3s_datastore_endpoint"
   when: pl_k3s_datastore_endpoint == 'NONE'
 
-- name: drop all tables in postgress database owned by current user, for safety
-  ansible.builtin.shell: |
-    psql '{{ht_k3s_datastore_endpoint}}' -c 'DROP OWNED BY current_user;'
+- name: check if done file exists
+  ansible.builtin.stat:
+    path: /etc/rancher/.k3s.play.done
+  register: pl_play_done_file_check
+
+- name: if play done file doesn't exists and pl_cluster_init is true then ensure no data in database data to begin with
+  ansible.builtin.shell: psql '{{ht_k3s_datastore_endpoint}}' -c 'DROP OWNED BY current_user;'
+  args:
+    creates: /etc/rancher/.k3s.play.done
   ignore_errors: true
   delegate_to: 127.0.0.1
-  when: pl_cluster_init and inventory_hostname == groups['control-plane'][0]
+  when: pl_cluster_init and inventory_hostname == groups['control-plane'][0] and not pl_play_done_file_check.stat.exists
 
 - name: ensure containerd service is running
   ansible.builtin.service:
@@ -71,7 +77,6 @@
     mode: '0640'
   register: pl_k3s_config_copy
 
-
 - name: restart k3s service if any of the files update task has changed
   ansible.builtin.service:
     name: k3s
@@ -108,7 +113,7 @@
       environment:
         KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
       args:
-        creates: /etc/rancher/.cilium-cli-install.done
+        creates: /etc/rancher/.k3s.play.done
       register: pl_cilium_cni_install
 
     - name: copy kubeconfig file for next fetch, use command instead of copy
@@ -152,7 +157,7 @@
         chdir: "{{playbook_dir}}/../sharedfiles/manifests"
       when: pl_kubeconfig_envrc_copy is changed
       delegate_to: 127.0.0.1
-  when: pl_cluster_init
+  when: pl_cluster_init and not pl_play_done_file_check.stat.exists
 
 - name: wait for the node to be ready
   ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s

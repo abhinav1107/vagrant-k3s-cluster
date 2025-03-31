@@ -60,25 +60,25 @@
         fstype: ext4
         dev: /dev/{{pl_extra_disk_check.stdout_lines[0]}}
 
-    - name: find UUID of extra disk
-      ansible.builtin.shell: blkid -s UUID -o value /dev/{{pl_extra_disk_check.stdout_lines[0]}}
-      register: pl_extra_disk_uuid
-      changed_when: false
+    # - name: find UUID of extra disk
+    #   ansible.builtin.shell: blkid -s UUID -o value /dev/{{pl_extra_disk_check.stdout_lines[0]}}
+    #   register: pl_extra_disk_uuid
+    #   changed_when: false
 
-    - name: ensure mount point
-      ansible.builtin.file:
-        path: /var/openebs
-        state: directory
-        mode: "0755"
+    # - name: ensure mount point
+    #   ansible.builtin.file:
+    #     path: /var/openebs
+    #     state: directory
+    #     mode: "0755"
 
-    - name: mount extra disk at /var/openebs
-      ansible.posix.mount:
-        path: /var/openebs
-        src: "UUID={{ pl_extra_disk_uuid.stdout }}"
-        fstype: ext4
-        opts: defaults
-        passno: "2"
-        state: mounted
+    # - name: mount extra disk at /var/openebs
+    #   ansible.posix.mount:
+    #     path: /var/openebs
+    #     src: "UUID={{ pl_extra_disk_uuid.stdout }}"
+    #     fstype: ext4
+    #     opts: defaults
+    #     passno: "2"
+    #     state: mounted
 
     - name: mark disk setup done
       ansible.builtin.file:
@@ -153,10 +153,10 @@
         state: present
         sysctl_set: true
       loop:
-        - { name: vm.nr_hugepages, value: 1024, reload: false }
-        - { name: net.bridge.bridge-nf-call-iptables, value: 1, reload: false }
-        - { name: net.bridge.bridge-nf-call-ip6tables, value: 1, reload: false }
-        - { name: net.ipv4.ip_forward, value: 1, reload: true }
+        - { name: vm.nr_hugepages, value: "1024", reload: false }
+        - { name: net.bridge.bridge-nf-call-iptables, value: "1", reload: false }
+        - { name: net.bridge.bridge-nf-call-ip6tables, value: "1", reload: false }
+        - { name: net.ipv4.ip_forward, value: "1", reload: true }
 
 
     - name: add docker-ce repo
