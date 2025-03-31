@@ -14,7 +14,6 @@
 #   except ansible/inventory/group_vars/all.yaml and ansible/inventory/local files
 !/ansible/inventory/
 /ansible/inventory/*
-!/ansible/inventory/group_vars/all.yaml
 !/ansible/inventory/local
 !/ansible/inventory/group_vars/
 /ansible/inventory/group_vars/*
