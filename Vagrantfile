@@ -47,11 +47,13 @@ controller_ha = cluster_config.dig("nodes", "controller", "ha") || false
 controller_count = controller_ha ? 3 : 1
 controller_cpu = cluster_config.dig("nodes", "controller", "cpu") || 2
 controller_memory = cluster_config.dig("nodes", "controller", "memory") || 2048
+controller_disk_enabled = cluster_config.dig("nodes", "controller", "storage", "enabled") || false
 
 # worker node settings
 worker_count = cluster_config.dig("nodes", "worker", "count") || 2
 worker_cpu = cluster_config.dig("nodes", "worker", "cpu") || 2
 worker_memory = cluster_config.dig("nodes", "worker", "memory") || 2048
+worker_disk_enabled = cluster_config.dig("nodes", "worker", "storage", "enabled") || false
 
 # load balancer node settings
 load_balancer_count = cluster_config.dig("nodes", "loadbalancer", "count") || 0
@@ -90,6 +92,12 @@ Vagrant.configure("2") do |config|
                 vb.vm.network "private_network", ip: hostonly_ip if hostonly_ip
             end
 
+            # attach disk if we have asked for it
+            if controller_disk_enabled
+                controller_disk_capacity = cluster_config.dig("nodes", "controller", "storage", "disk_size_gb") || 20
+                vb.vm.disk :disk, size: "#{controller_disk_capacity}GB", name: "disk_controller_#{node_index}"
+            end
+
             # configure public network if given
             if public_enabled
                 public_network_opts = {}
@@ -121,6 +129,12 @@ Vagrant.configure("2") do |config|
             # configure host only network if given
             if hostonly_enabled
                 vb.vm.network "private_network", ip: hostonly_ip if hostonly_ip
+            end
+
+            # attach disk if we have asked for it
+            if worker_disk_enabled
+                worker_disk_capacity = cluster_config.dig("nodes", "worker", "storage", "disk_size_gb") || 50
+                vb.vm.disk :disk, size: "#{worker_disk_capacity}GB", name: "disk_worker_#{node_index}"
             end
 
             # configure public network if given
