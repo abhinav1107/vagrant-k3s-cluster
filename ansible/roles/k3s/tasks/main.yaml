@@ -91,6 +91,20 @@
 
 - name: block for cluster init
   block:
+    - name: get current version for kubernetes kubectl file
+      ansible.builtin.command: curl -L -s https://dl.k8s.io/release/stable.txt
+      register: pl_latest_k8s_version
+      environment: "{{ http_proxy | default({}) }}"
+
+    - name: ensure kubectl file
+      ansible.builtin.get_url:
+        url: 'https://dl.k8s.io/release/{{pl_latest_k8s_version.stdout}}/bin/{{ansible_system| lower}}/{{pl_cilium_cli_arch_type[ansible_architecture]}}/kubectl'
+        dest: /usr/sbin/kubectl
+        owner: root
+        group: root
+        mode: '0750'
+      environment: "{{ http_proxy | default({}) }}"
+
     - name: ensure cilium binary is present
       ansible.builtin.get_url:
         url: 'https://github.com/cilium/cilium-cli/releases/download/{{pl_cilium_cli_version}}/cilium-{{ansible_system| lower}}-{{pl_cilium_cli_arch_type[ansible_architecture]}}.tar.gz'
@@ -98,6 +112,7 @@
         owner: root
         group: root
         mode: '0644'
+      environment: "{{ http_proxy | default({}) }}"
 
     - name: extract cilium cli binary
       ansible.builtin.unarchive:
@@ -157,7 +172,7 @@
         chdir: "{{playbook_dir}}/../sharedfiles/manifests"
       when: pl_kubeconfig_envrc_copy is changed
       delegate_to: 127.0.0.1
-  when: pl_cluster_init and not pl_play_done_file_check.stat.exists
+  when: pl_cluster_init and inventory_hostname == groups['control-plane'][0] and not pl_play_done_file_check.stat.exists
 
 - name: wait for the node to become ready
   ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
@@ -165,4 +180,4 @@
     KUBECONFIG: "{{playbook_dir | basename}}/sharedfiles/manifests/.kubeconfig.yaml"
   async: 600
   poll: 5
-  delegate_to: 127.0.0.1
+  delegate_to: groups['control-plane'][0]
