@@ -6,6 +6,9 @@ node-external-ip: "{{ht_external_ip}}"
 {% endif %}
 node-label:
   - "topology.kubernetes.io/region=vagrant"
+{% if "worker" in group_names %}
+  - "openebs.io/engine=mayastor"
+{% endif %}
   - "topology.kubernetes.io/zone={{ht_zone| default('one')}}"
 {% if "control-plane" in group_names %}
 node-taint+:
