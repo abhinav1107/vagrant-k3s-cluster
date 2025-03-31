@@ -179,7 +179,7 @@
   environment:
     KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
   retries: 3
-  delay: 5
+  delay: 10
   register: pl_node_present_check
   until: pl_node_present_check is not failed
   delegate_to: "{{groups['control-plane'][0]}}"
