@@ -10,8 +10,11 @@
   post_tasks:
     - name: wait for first node to become ready
       ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
+      environment:
+        KUBECONFIG: "{{playbook_dir | basename}}/sharedfiles/manifests/.kubeconfig.yaml"
       async: 600
       poll: 5
+      delegate_to: 127.0.0.1
 
 - name: configure rest of the control plane nodes
   hosts: control-plane[1:]
@@ -22,9 +25,11 @@
   post_tasks:
     - name: wait for rest of the control plane nodes to become ready
       ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
+      environment:
+        KUBECONFIG: "{{playbook_dir | basename}}/sharedfiles/manifests/.kubeconfig.yaml"
       async: 600
       poll: 5
-      delegate_to: control-plane[0]
+      delegate_to: 127.0.0.1
 
 - name: configure worker nodes
   hosts: worker
@@ -35,6 +40,8 @@
   post_tasks:
     - name: wait for worker nodes to become ready
       ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
+      environment:
+        KUBECONFIG: "{{playbook_dir | basename}}/sharedfiles/manifests/.kubeconfig.yaml"
       async: 600
       poll: 5
-      delegate_to: control-plane[0]
+      delegate_to: 127.0.0.1
