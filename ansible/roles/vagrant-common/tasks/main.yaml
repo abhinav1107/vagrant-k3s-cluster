@@ -63,6 +63,7 @@
     - name: find UUID of extra disk
       ansible.builtin.shell: blkid -s UUID -o value /dev/{{pl_extra_disk_check.stdout_lines[0]}}
       register: pl_extra_disk_uuid
+      changed_when: false
 
     - name: ensure mount point
       ansible.builtin.file:
@@ -78,6 +79,11 @@
         opts: defaults
         passno: "2"
         state: present
+
+    - name: perform daemon-reload and mount -a just in case
+      ansible.builtin.shell: systemctl daemon-reload && mount -a
+      ignore_errors: true
+      changed_when: false
 
     - name: mark disk setup done
       ansible.builtin.file:
