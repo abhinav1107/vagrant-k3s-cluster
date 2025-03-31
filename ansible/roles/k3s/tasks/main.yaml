@@ -177,7 +177,7 @@
 - name: wait for the node to become ready
   ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
   environment:
-    KUBECONFIG: "{{playbook_dir | basename}}/sharedfiles/manifests/.kubeconfig.yaml"
+    KUBECONFIG: "{{playbook_dir | dirname}}/sharedfiles/manifests/.kubeconfig.yaml"
   async: 600
   poll: 5
   delegate_to: groups['control-plane'][0]
