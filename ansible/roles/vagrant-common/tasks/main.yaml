@@ -78,12 +78,7 @@
         fstype: xfs
         opts: defaults
         passno: "2"
-        state: present
-
-    - name: perform daemon-reload and mount -a just in case
-      ansible.builtin.shell: systemctl daemon-reload && mount -a
-      ignore_errors: true
-      changed_when: false
+        state: mounted
 
     - name: mark disk setup done
       ansible.builtin.file:
