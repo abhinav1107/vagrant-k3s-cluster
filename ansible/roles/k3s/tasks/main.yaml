@@ -130,7 +130,7 @@
 
     - name: touch done file after cilium setup is done
       ansible.builtin.file:
-        path: /etc/rancher/.cilium-cli-install.done
+        path: /etc/rancher/.k3s.play.done
         state: touch
         owner: root
         group: root
@@ -158,3 +158,11 @@
       when: pl_kubeconfig_envrc_copy is changed
       delegate_to: 127.0.0.1
   when: pl_cluster_init and not pl_play_done_file_check.stat.exists
+
+- name: wait for the node to become ready
+  ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
+  environment:
+    KUBECONFIG: "{{playbook_dir | basename}}/sharedfiles/manifests/.kubeconfig.yaml"
+  async: 600
+  poll: 5
+  delegate_to: 127.0.0.1
