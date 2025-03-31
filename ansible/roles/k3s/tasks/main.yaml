@@ -155,4 +155,6 @@
   when: pl_cluster_init
 
 - name: wait for the node to be ready
-  ansible.builtin.shell:
+  ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
+  async: 600
+  poll: 5
