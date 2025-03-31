@@ -19,6 +19,9 @@
 /ansible/inventory/group_vars/*
 !/ansible/inventory/group_vars/all.yaml
 
+# ignore test ansible playbook
+/ansible/test.yaml
+
 # ignore local cluster config file
 cluster-local.yaml
 
