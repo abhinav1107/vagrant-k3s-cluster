@@ -158,8 +158,3 @@
       when: pl_kubeconfig_envrc_copy is changed
       delegate_to: 127.0.0.1
   when: pl_cluster_init and not pl_play_done_file_check.stat.exists
-
-- name: wait for the node to be ready
-  ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
-  async: 600
-  poll: 5

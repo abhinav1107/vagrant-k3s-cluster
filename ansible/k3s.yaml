@@ -1,5 +1,5 @@
 ---
-- name: configure first server node
+- name: configure first control plane node
   hosts: control-plane[0]
 
   roles:
@@ -7,8 +7,34 @@
       vars:
         cluster_init: true
 
-- name: configure rest of the nodes
-  hosts: control-plane:worker:!control-plane[0]
+  post_tasks:
+    - name: wait for first node to become ready
+      ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
+      async: 600
+      poll: 5
+
+- name: configure rest of the control plane nodes
+  hosts: control-plane[1:]
 
   roles:
     - role: k3s
+
+  post_tasks:
+    - name: wait for rest of the control plane nodes to become ready
+      ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
+      async: 600
+      poll: 5
+      delegate_to: control-plane[0]
+
+- name: configure worker nodes
+  hosts: worker
+
+  roles:
+    - role: k3s
+
+  post_tasks:
+    - name: wait for worker nodes to become ready
+      ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
+      async: 600
+      poll: 5
+      delegate_to: control-plane[0]
