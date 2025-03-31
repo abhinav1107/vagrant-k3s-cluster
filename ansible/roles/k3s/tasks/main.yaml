@@ -9,6 +9,13 @@
     msg: "token value can not be empty. Either pass is via k3s_datastore_endpoint or set an inventory variable ht_k3s_datastore_endpoint"
   when: pl_k3s_datastore_endpoint == 'NONE'
 
+- name: drop all tables in postgress database owned by current user, for safety
+  ansible.builtin.shell: |
+    psql '{{ht_k3s_datastore_endpoint}}' -c 'DROP OWNED BY current_user;'
+  ignore_errors: true
+  delegate_to: 127.0.0.1
+  when: pl_cluster_init and inventory_hostname == groups['control-plane'][0]
+
 - name: ensure containerd service is running
   ansible.builtin.service:
     name: containerd
@@ -146,3 +153,6 @@
       when: pl_kubeconfig_envrc_copy is changed
       delegate_to: 127.0.0.1
   when: pl_cluster_init
+
+- name: wait for the node to be ready
+  ansible.builtin.shell:

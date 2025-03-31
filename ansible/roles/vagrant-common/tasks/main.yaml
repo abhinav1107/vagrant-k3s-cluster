@@ -143,6 +143,7 @@
       loop:
         - br_netfilter
         - overlay
+        - nvme-tcp
 
     - name: ensure sysctl entries
       ansible.builtin.sysctl:

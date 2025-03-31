@@ -1,31 +1,43 @@
+# App related properties
 token: "{{pl_k3s_token}}"
-node-name: "{{ht_name}}"
-node-ip: "{{inventory_hostname}}"
-{% if ht_external_ip is defined %}
-node-external-ip: "{{ht_external_ip}}"
-{% endif %}
-node-label:
-  - "topology.kubernetes.io/region=vagrant"
-{% if "worker" in group_names %}
-  - "openebs.io/engine=mayastor"
-{% endif %}
-  - "topology.kubernetes.io/zone={{ht_zone| default('one')}}"
 {% if "control-plane" in group_names %}
-node-taint+:
-  - "CriticalAddonsOnly=true:NoSchedule"
 datastore-endpoint: "{{pl_k3s_datastore_endpoint}}"
 cluster-cidr: "{{pl_pod_network_cidr}}"
 service-cidr: "{{pl_service_network_cidr}}"
-{% if ht_environment_domain is defined and ht_k8s_apiserver_base is defined %}
-tls-san:
-  - "{{pl_k3s_api_endpoint}}"
-{% endif %}
 disable:
   - servicelb
   - traefik
   - metrics-server
 flannel-backend: none
 disable-network-policy: true
+{% if ht_environment_domain is defined and ht_k8s_apiserver_base is defined %}
+tls-san:
+  - "{{pl_k3s_api_endpoint}}"
+{% endif %}
 {% else %}
 server: "https://{{pl_k3s_api_endpoint}}:6443"
+{% endif %}
+
+
+# Node specific properties
+node-name: "{{ht_name}}"
+node-ip: "{{inventory_hostname}}"
+{% if ht_external_ip is defined %}
+node-external-ip: "{{ht_external_ip}}"
+{% endif %}
+{% if "control-plane" in group_names %}
+
+# Node Taint for control-plane
+node-taint+:
+  - "CriticalAddonsOnly=true:NoSchedule"
+{% endif %}
+
+# Node labels
+node-label:
+  - "topology.kubernetes.io/region=local"
+  - "topology.kubernetes.io/zone={{ht_zone| default('one')}}"
+  - "k8s.lan/node-role={{'control-plane' if 'control-plane' in group_names else 'worker'}}"
+  - "k8s.lan/node-name={{ht_name}}"
+{% if "worker" in group_names %}
+  - "openebs.io/engine=mayastor"
 {% endif %}
