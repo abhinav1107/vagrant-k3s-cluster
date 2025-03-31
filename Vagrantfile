@@ -15,26 +15,26 @@ def load_cluster_config
     global_config = {}
     local_config = {}
 
-  if File.exist?('cluster.yaml')
-    begin
-      global_config = YAML.load_file('cluster.yaml') || {}
-    rescue Psych::SyntaxError
-      warn "Failed loading cluster.yaml due to syntax error"
+    if File.exist?('cluster.yaml')
+        begin
+            global_config = YAML.load_file('cluster.yaml') || {}
+        rescue Psych::SyntaxError
+            warn "Failed loading cluster.yaml due to syntax error"
+        end
+    else
+        warn "Missing cluster.yaml file"
     end
-  else
-    warn "Missing cluster.yaml file"
-  end
 
-  if File.exist?('cluster-local.yaml')
-    begin
-      local_config = YAML.load_file('cluster-local.yaml') || {}
-    rescue Psych::SyntaxError
-      warn "Failed loading cluster-local.yaml due to syntax error"
+    if File.exist?('cluster-local.yaml')
+        begin
+            local_config = YAML.load_file('cluster-local.yaml') || {}
+        rescue Psych::SyntaxError
+            warn "Failed loading cluster-local.yaml due to syntax error"
+        end
     end
-  end
 
-  # Perform deep merge
-  deep_merge(global_config, local_config)
+    # Perform deep merge
+    deep_merge(global_config, local_config)
 end
 cluster_config = load_cluster_config
 cluster_name = cluster_config.key?("name") ? cluster_config["name"].downcase.gsub(/\s+/, "-") : "vagrant-k8s"
