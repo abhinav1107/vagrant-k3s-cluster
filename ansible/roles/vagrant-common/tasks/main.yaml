@@ -152,9 +152,11 @@
         state: present
         sysctl_set: true
       loop:
+        - { name: vm.nr_hugepages, value: 1024, reload: false }
         - { name: net.bridge.bridge-nf-call-iptables, value: 1, reload: false }
         - { name: net.bridge.bridge-nf-call-ip6tables, value: 1, reload: false }
         - { name: net.ipv4.ip_forward, value: 1, reload: true }
+
 
     - name: add docker-ce repo
       ansible.builtin.get_url:
