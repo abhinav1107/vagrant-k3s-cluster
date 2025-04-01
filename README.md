@@ -135,7 +135,7 @@ ansible-playbook k3s.yaml
 - [K3s](https://k3s.io/)
 - [Longhorn](https://longhorn.io/)
 - [Vagrant Kubeadm Lab](https://github.com/techiescamp/vagrant-kubeadm-kubernetes) (ideas base)
-- [ChatGPT](https://chatgpt.com) for this fire 🔥 content.
+- [ChatGPT](https://chatgpt.com) for this fire 🔥 README content.
 
 ---
 

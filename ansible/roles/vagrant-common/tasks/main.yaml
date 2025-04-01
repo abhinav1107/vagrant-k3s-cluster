@@ -179,9 +179,9 @@
         - { name: net.ipv4.ip_forward, value: "1", reload: true }
 
     - name: generate initiatorname.iscsi file
-      ansible.builtin.command:
-        cmd: echo "InitiatorName=$(/sbin/iscsi-iname)" > /etc/iscsi/initiatorname.iscsi
-        creates: etc/iscsi/initiatorname.iscsi
+      ansible.builtin.shell: echo "InitiatorName=$(/sbin/iscsi-iname)" > /etc/iscsi/initiatorname.iscsi
+      args:
+        creates: /etc/iscsi/initiatorname.iscsi
       register: pl_iscsi_file_create
 
     - name: restart iscsid if last has changed
@@ -231,4 +231,22 @@
         state: restarted
         enabled: true
       when: pl_containerd_config_generat is changed
+
+    - name: ensure pip is present for next step
+      ansible.builtin.dnf:
+        name:
+          - python3-pip
+          - python3-pip-wheel
+          - python3-setuptools
+      environment: "{{ http_proxy | default({}) }}"
+      when: "'control-plane' in group_names"
+
+    - name: ensure ansible kubernetes dependencies
+      ansible.builtin.pip:
+        name:
+          - kubernetes>=24.2.0
+          - PyYAML>=3.11
+          - jsonpatch
+      environment: "{{ http_proxy | default({}) }}"
+      when: "'control-plane' in group_names"
   when: '"kubernetes" in group_names'
