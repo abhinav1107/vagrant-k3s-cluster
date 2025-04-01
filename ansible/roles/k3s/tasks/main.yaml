@@ -198,39 +198,20 @@
       delegate_to: 127.0.0.1
   when: pl_cluster_init and inventory_hostname == groups['control-plane'][0] and not pl_play_done_file_check.stat.exists
 
-- name: wait for the node to become ready or timeout and fail if not ready
-  ansible.builtin.k8s_info:
-    kind: Node
-    name: "{{ht_name}}"
-    kubeconfig: "/etc/rancher/k3s/k3s.yaml"
-  register: pl_node_ready_check
-  until: >
-    pl_node_ready_check.resources | length > 0 and
-    (
-      pl_node_ready_check.resources[0].status.conditions
-      | selectattr('type', 'equalto', 'Ready')
-      | map(attribute='status')
-      | list
-      | first == 'True'
-    )
-  retries: 60
+- name: wait for the node to appear in kubectl command
+  ansible.builtin.shell: kubectl  get nodes | grep {{ht_name}}
+  environment:
+    KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
+  retries: 3
   delay: 10
-  delegate_to: "{{ groups['control-plane'][0] }}"
+  register: pl_node_present_check
+  until: pl_node_present_check is not failed
+  delegate_to: "{{groups['control-plane'][0]}}"
 
-# - name: wait for the node to appear in kubectl command
-#   ansible.builtin.shell: kubectl  get nodes | grep {{ht_name}}
-#   environment:
-#     KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
-#   retries: 3
-#   delay: 10
-#   register: pl_node_present_check
-#   until: pl_node_present_check is not failed
-#   delegate_to: "{{groups['control-plane'][0]}}"
-
-# - name: wait for the node to become ready
-#   ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
-#   environment:
-#     KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
-#   async: 600
-#   poll: 5
-#   delegate_to: "{{groups['control-plane'][0]}}"
+- name: wait for the node to become ready
+  ansible.builtin.shell: kubectl wait --for=condition=Ready nodes --selector 'kubernetes.io/hostname={{ht_name}}' --timeout=600s
+  environment:
+    KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
+  async: 600
+  poll: 5
+  delegate_to: "{{groups['control-plane'][0]}}"
