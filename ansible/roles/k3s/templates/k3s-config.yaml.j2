@@ -38,4 +38,3 @@ node-label:
   - topology.kubernetes.io/zone='{{ht_zone| default("one")}}'
   - k8s.lan/node-role='{{"control-plane" if "control-plane" in group_names else "worker"}}'
   - k8s.lan/node-name='{{ht_name}}'
-  - node.longhorn.io/default-node-tags='["{{\"control-plane\" if \"control-plane\" in group_names else \"worker\"", "storage", "{{ht_zone| default(\"one\")}}"]'

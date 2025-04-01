@@ -68,6 +68,30 @@
     mode: '0640'
   register: pl_k3s_sysconfig_copy
 
+- name: ensure rsyslog config for k3s service
+  ansible.builtin.template:
+    src: k3s.rsyslog.conf.j2
+    dest: /etc/rsyslog.d/k3s.conf
+    owner: root
+    group: root
+    mode: '0644'
+  register: pl_rsyslog_conf_copy
+
+- name: restart rsyslogd if last step has changed
+  ansible.builtin.service:
+    name: rsyslog
+    state: restarted
+    enabled: true
+  when: pl_rsyslog_conf_copy is changed
+
+- name: ensure logrotate configuration for k3s logs
+  ansible.builtin.template:
+    src: k3s.logrotare.j2
+    dest: /etc/logrotate.d/k3s
+    owner: root
+    group: root
+    mode: '0644'
+
 - name: ensure k3s config file
   ansible.builtin.template:
     src: k3s-config.yaml.j2

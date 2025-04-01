@@ -12,6 +12,13 @@
     name: "{{ ht_name+'.'+ht_environment_domain if ht_environment_domain is defined else ht_name }}"
   when: pl_hostname_file_update is changed
 
+- name: restart rsyslog to reflect this hostname change
+  ansible.builtin.service:
+    name: rsyslog
+    state: restarted
+    enabled: true
+  when: pl_hostname_file_update is changed
+
 - name: Ensure beginning placeholder
   ansible.builtin.lineinfile:
     path: /etc/hosts
