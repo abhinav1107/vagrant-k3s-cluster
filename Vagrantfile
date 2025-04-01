@@ -95,7 +95,7 @@ Vagrant.configure("2") do |config|
             # attach disk if we have asked for it
             if controller_disk_enabled
                 controller_disk_capacity = cluster_config.dig("nodes", "controller", "storage", "disk_size_gb") || 20
-                vb.vm.disk :disk, size: "#{controller_disk_capacity}GB", name: "disk_controller_#{node_index}"
+                vb.vm.disk :disk, size: "#{controller_disk_capacity}GB", name: "disk-#{node_name}"
             end
 
             # configure public network if given
@@ -134,7 +134,7 @@ Vagrant.configure("2") do |config|
             # attach disk if we have asked for it
             if worker_disk_enabled
                 worker_disk_capacity = cluster_config.dig("nodes", "worker", "storage", "disk_size_gb") || 50
-                vb.vm.disk :disk, size: "#{worker_disk_capacity}GB", name: "disk_worker_#{node_index}"
+                vb.vm.disk :disk, size: "#{worker_disk_capacity}GB", name: "disk-#{node_name}"
             end
 
             # configure public network if given
