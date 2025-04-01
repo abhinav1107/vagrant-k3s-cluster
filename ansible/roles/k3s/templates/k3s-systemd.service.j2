@@ -15,10 +15,10 @@ LimitNPROC=infinity
 LimitCORE=infinity
 TasksMax=infinity
 TimeoutStartSec=0
-ExecStart=/usr/local/sbin/k3s {{ 'server' if "control-plane" in group_names else 'agent' }} --config /etc/rancher/k3s/config.yaml
+ExecStart=/usr/local/sbin/k3s {{pl_node_type}} --config /etc/rancher/k3s/config.yaml
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=k3s
+SyslogIdentifier=k3s-{{pl_node_type}}
 
 [Install]
 WantedBy=multi-user.target

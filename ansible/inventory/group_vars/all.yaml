@@ -1,3 +1,4 @@
 ht_cloud_provider: vagrant
+ht_cloud_region: local
 ht_environment_type: local
 ht_environment_name: k8s-lab

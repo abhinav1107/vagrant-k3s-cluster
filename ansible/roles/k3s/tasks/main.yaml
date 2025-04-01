@@ -215,3 +215,14 @@
   async: 600
   poll: 5
   delegate_to: "{{groups['control-plane'][0]}}"
+
+- name: add extra tags to node for later
+  kubernetes.core.k8s:
+    kubeconfig: "/etc/rancher/k3s/k3s.yaml"
+    kind: Node
+    state: patched
+    name: "{{ht_name}}"
+    definition:
+      metadata:
+        "node.longhorn.io/default-node-tags": '["storage","{{pl_node_type}}","{{ht_zone}}"]'
+  delegate_to: "{{groups['control-plane'][0]}}"

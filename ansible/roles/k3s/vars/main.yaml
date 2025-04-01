@@ -11,3 +11,4 @@ pl_cilium_version: '1.17.2'
 pl_cilium_cli_version: 'v0.18.2'
 pl_k3s_version: "{{k3s_version| default('v1.32.3+k3s1')}}"
 pl_k3s_api_endpoint: "{{ (ht_k8s_apiserver_base + '.' + ht_environment_domain) if ht_k8s_apiserver_base is defined and ht_environment_domain is defined else groups['control-plane'][0] }}"
+pl_node_type: "{{ 'server' if 'control-plane' in group_names else 'agent' }}"
