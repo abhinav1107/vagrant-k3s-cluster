@@ -163,6 +163,7 @@
         - overlay
         - nvme-tcp
         - iscsi_tcp
+        - dm_crypt
 
     - name: ensure sysctl entries
       ansible.builtin.sysctl:
