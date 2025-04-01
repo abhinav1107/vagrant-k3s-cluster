@@ -34,7 +34,7 @@ node-taint+:
 
 # Node labels
 node-label:
-  - topology.kubernetes.io/region='local'
-  - topology.kubernetes.io/zone='{{ht_zone| default("one")}}'
-  - k8s.lan/node-role='{{"control-plane" if "control-plane" in group_names else "worker"}}'
-  - k8s.lan/node-name='{{ht_name}}'
+  - "topology.kubernetes.io/region=local"
+  - "topology.kubernetes.io/zone={{ht_zone| default('one')}}"
+  - "k8s.lan/node-role={{'control-plane' if 'control-plane' in group_names else 'worker'}}"
+  - "k8s.lan/node-name={{ht_name}}"
