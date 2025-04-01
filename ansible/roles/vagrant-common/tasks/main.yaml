@@ -60,25 +60,25 @@
         fstype: ext4
         dev: /dev/{{pl_extra_disk_check.stdout_lines[0]}}
 
-    # - name: find UUID of extra disk
-    #   ansible.builtin.shell: blkid -s UUID -o value /dev/{{pl_extra_disk_check.stdout_lines[0]}}
-    #   register: pl_extra_disk_uuid
-    #   changed_when: false
+    - name: find UUID of extra disk
+      ansible.builtin.shell: blkid -s UUID -o value /dev/{{pl_extra_disk_check.stdout_lines[0]}}
+      register: pl_extra_disk_uuid
+      changed_when: false
 
-    # - name: ensure mount point
-    #   ansible.builtin.file:
-    #     path: /var/openebs
-    #     state: directory
-    #     mode: "0755"
+    - name: ensure mount point /var/lib/longhorn
+      ansible.builtin.file:
+        path: /var/lib/longhorn
+        state: directory
+        mode: "0755"
 
-    # - name: mount extra disk at /var/openebs
-    #   ansible.posix.mount:
-    #     path: /var/openebs
-    #     src: "UUID={{ pl_extra_disk_uuid.stdout }}"
-    #     fstype: ext4
-    #     opts: defaults
-    #     passno: "2"
-    #     state: mounted
+    - name: mount extra disk at /var/lib/longhorn
+      ansible.posix.mount:
+        path: /var/lib/longhorn
+        src: "UUID={{ pl_extra_disk_uuid.stdout }}"
+        fstype: ext4
+        opts: defaults
+        passno: "2"
+        state: mounted
 
     - name: mark disk setup done
       ansible.builtin.file:
@@ -135,7 +135,18 @@
 
 - name: block for kubernetes host initial configuration
   block:
-    - name: load br_netfilter and overlay kernel modules
+    - name: ensure longhorn required package
+      ansible.builtin.dnf:
+        name:
+          - "iscsi-initiator-utils"
+          - "nfs-utils"
+          - "cryptsetup"
+          - "device-mapper"
+        enablerepo:
+          - epel
+      environment: "{{ http_proxy | default({}) }}"
+
+    - name: load kernel modules
       ansible.builtin.modprobe:
         name: "{{item}}"
         state: present
@@ -144,6 +155,7 @@
         - br_netfilter
         - overlay
         - nvme-tcp
+        - iscsi_tcp
 
     - name: ensure sysctl entries
       ansible.builtin.sysctl:
@@ -158,6 +170,23 @@
         - { name: net.bridge.bridge-nf-call-ip6tables, value: "1", reload: false }
         - { name: net.ipv4.ip_forward, value: "1", reload: true }
 
+    - name: generate initiatorname.iscsi file
+      ansible.builtin.command:
+        cmd: echo "InitiatorName=$(/sbin/iscsi-iname)" > /etc/iscsi/initiatorname.iscsi
+        creates: etc/iscsi/initiatorname.iscsi
+      register: pl_iscsi_file_create
+
+    - name: restart iscsid if last has changed
+      ansible.builtin.service:
+        name: iscsid
+        state: restarted
+      when: pl_iscsi_file_create is changed
+
+    - name: ensure iscsid is running and enabled
+      ansible.builtin.service:
+        name: iscsid
+        state: started
+        enabled: true
 
     - name: add docker-ce repo
       ansible.builtin.get_url:
